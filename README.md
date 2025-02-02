@@ -15,3 +15,12 @@
 4. Run script
 
 `python main.py`
+
+TODO:
+- Make it classy
+- Enable users to select which playlists to download
+- Allow users to select where to download
+- Update playlists
+    - This should check selected playlists to see if songs have been added/removed and download/delete them accordingly
+- Make it executable by a script
+- Add album pic, artist
