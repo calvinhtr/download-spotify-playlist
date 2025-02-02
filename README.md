@@ -1,5 +1,4 @@
-# Download your Spotify playlists in a really bad quality :D
-
+# Download your Spotify playlists from youtube :D
 1. Create a venv:
 
 `python3 -m venv venv/`
