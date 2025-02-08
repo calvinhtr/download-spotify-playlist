@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
 from pytubefix import YouTube, Search
 from pytubefix.cli import on_progress
+from mutagen.mp4 import MP4
+from typing import List
 
 ## TESTING CODE FOR DOWNLOADING AUDIO
 
@@ -55,6 +57,45 @@ from pytubefix.cli import on_progress
 
 ## WORKING CODE
 
+def updateArtist(path: str, artist_names: List[str]):
+    audio = MP4(path)
+    audio['©ART'] = []
+
+    for artist in artist_names:
+        audio['©ART'].append(artist)
+    audio.save(path)
+
+
+def downloadSong(song_title: str, artist_names: List[str], output_path: str):
+    print(f"Downloading {song_title}")
+    # Perform search and get first video in search. Prayge it's the right one
+    search_title = song_title
+    for artist in artist_names:
+        search_title += " " 
+        search_title += artist
+    s = Search(search_title + ' lyrics')
+    # Find a version with no slashes
+    ind = 0
+    while True:
+        if "/" not in s.videos[ind].title:
+            break
+        ind += 1
+    yt = YouTube(
+        s.videos[ind].watch_url, 
+        use_oauth=True, 
+        allow_oauth_cache=True, 
+        # on_progress_callback=on_progress
+        )
+    # Retrieve audio
+    video = yt.streams.get_audio_only()
+    # Download audio
+    out_file = video.download(output_path=output_path)
+    new_file = output_path + '/' + song_title + '.m4a'
+    os.rename(out_file, new_file)
+
+    # Update artist name
+    updateArtist(new_file, artist_names)
+
 # Load .env
 load_dotenv()
 
@@ -78,48 +119,25 @@ while results['next']:
 for playlist in playlists:
     playlist_name = playlist['name']
     output_path = os.getcwd() + f'/{playlist_name}'
-    # print(playlist['id'])
-    # print(sp.playlist_items(playlist['id']))
     print(f'Updating {playlist_name}')
     songs = sp.playlist_items(playlist['id'])['items']
     for song in songs:
-        name = song['track']['name']
-        artists = song['track']['artists']
-        searchTitle = name + " -"
-        for artist in artists:
-            searchTitle += " "
-            searchTitle += artist['name']
+        song_name = song['track']['name']
+        artists_unprocessed = song['track']['artists']
+        artists_processed = []
+        for artist in artists_unprocessed:
+            artists_processed.append(artist['name'])
         
         # Skip if file already downloaded
-        if os.path.isfile(output_path + '/' + searchTitle + '.mp3'):
-            print(f"Skipping {searchTitle}")
+        if os.path.isfile(output_path + '/' + song_name + '.m4a'):
+            print(f"Skipping {song_name}")
             continue
-        # TODO: RETRY MECHANISM
+
+        # Retry mechanism
         tries = 3
         for i in range(tries):
-            # functionify this
             try:
-                print(f"Downloading {searchTitle}")
-                # Perform search and get first video in search. Prayge it's the right one
-                s = Search(searchTitle + ' lyrics')
-                # Find a version with no slashes
-                ind = 0
-                while True:
-                    if "/" not in s.videos[ind].title:
-                        break
-                    ind += 1
-                yt = YouTube(
-                    s.videos[ind].watch_url, 
-                    use_oauth=True, 
-                    allow_oauth_cache=True, 
-                    # on_progress_callback=on_progress
-                    )
-                # Retrieve audio
-                video = yt.streams.get_audio_only()
-                # Download video
-                out_file = video.download(output_path=output_path)
-                new_file = output_path + '/' + searchTitle + '.mp3'
-                os.rename(out_file, new_file)
+                downloadSong(song_name, artists_processed, output_path)
             except:
                 if i < tries - 1:
                     "Reattempting..."
